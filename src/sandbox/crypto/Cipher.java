@@ -17,7 +17,7 @@ abstract class Cipher {
     ));
 
     public Cipher(String code) {
-        this.encrypted = code.toLowerCase().replaceAll("[\".!?\\-]", "");
+        this.encrypted = code.toLowerCase().replaceAll("[\".!?\\-,]", "");
         this.decrypted = encrypted;
         this.prepareCipher();
     }

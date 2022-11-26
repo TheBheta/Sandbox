@@ -8,6 +8,7 @@ import java.util.*;
 public class Aristocrat extends Cipher {
 
     private ArrayList<String> words_20k = new ArrayList<>();
+    private ArrayList<String> words_all = new ArrayList<>();
 
     public Aristocrat(String code) {
         super(code);
@@ -16,6 +17,9 @@ public class Aristocrat extends Cipher {
         Scanner sc_20k = Files.fileScanner("/words_20k.txt");
         while (sc_20k.hasNextLine())
             words_20k.add(sc_20k.nextLine().strip());
+        //Scanner sc_all = Files.fileScanner("/words_all.txt");
+        //while (sc_all.hasNextLine())
+        //    words_all.add(sc_20k.nextLine().strip());
     }
 
 
@@ -48,7 +52,10 @@ public class Aristocrat extends Cipher {
         if (s1.length() != s2.length()) return false;
         HashMap<Character, Character> mapping = new HashMap<>();
         for (int c = 0; c < s1.length(); c++) {
-            if (!mapping.containsKey(s1.charAt(c))) {
+            if (s1.charAt(c) == '\'') {
+                if (s2.charAt(c) != '\'') return false;
+            }
+            else if (!mapping.containsKey(s1.charAt(c))) {
                 if (mapping.values().contains(s2.charAt(c)) || s1.charAt(c) == s2.charAt(c))
                     return false;
                 //check for LOCKED
@@ -65,17 +72,19 @@ public class Aristocrat extends Cipher {
 
     @Override
     public boolean solve() {
-        investigate(decrypted, new HashMap<>());
-        return false;
+        ArrayList<String> solutions = investigate(decrypted, new HashMap<>());
+        System.out.println("Solutions found: " + solutions);
+        return solutions.size() != 0;
     }
 
     public ArrayList<String> investigate(String working, HashMap<Character, Character> mapping) {
-        System.out.println(working + ", " + mapping);
+        System.out.println(working + " | " + mapping);
         ArrayList<String> answers = new ArrayList<>();
         HashMap<String, ArrayList<String>> choices = getWordGuesses(working);
         //choose to fill in word with least possibilities
         ArrayList<String> choiceWords = new ArrayList<>(choices.keySet());
-        //if no choices, cipher must be solved!
+        System.out.println(choiceWords);
+        //if no choices, RETURN
         if (choiceWords.size() == 0) {
             answers.add(working);
             return answers;
@@ -85,8 +94,8 @@ public class Aristocrat extends Cipher {
         //investigate guessing from the best guesses
         tryWord:
         for (String possibility : choices.get(targetWord)) {
-            //System.out.println("Guessing that " + targetWord + " is the word " + possibility);
-            HashMap<Character, Character> updatedMapping = mapping;
+            //update mapping and check if guess is legal
+            HashMap<Character, Character> updatedMapping = new HashMap<>(mapping);
             for (int i = 0; i < targetWord.length(); i++) {
                 //if already locked, don't check it
                 if ((int) targetWord.charAt(i) < 91) continue;
@@ -96,13 +105,13 @@ public class Aristocrat extends Cipher {
                         continue tryWord;
                     updatedMapping.put(
                             targetWord.charAt(i), (char) ((int) possibility.charAt(i)));
-                } else {test
+                } else {
                     //check if the new mapping doesn't match with what we already have
                     if (updatedMapping.get(targetWord.charAt(i)) != possibility.charAt(i))
                         continue tryWord;
                 }
             }
-            System.out.println("Guessing " + targetWord + " is the word " + possibility);
+            System.out.println("Guessing " + targetWord + " is the word " + possibility + "...");
             answers.addAll(
                     investigate(applyMapping(working, updatedMapping), updatedMapping)
             );
