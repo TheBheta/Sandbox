@@ -2,14 +2,15 @@ package sandbox.crypto;
 
 import util.English;
 import util.Files;
+import util.Timer;
 
 import java.util.*;
 
 public class Aristocrat extends Cipher {
 
-    private ArrayList<String> words_20k = new ArrayList<>();
-    private ArrayList<String> words_all = new ArrayList<>();
-
+    private static ArrayList<String> words_20k = new ArrayList<>();
+    private static ArrayList<String> words_all = new ArrayList<>();
+    private int searchDepth = 40000;
     public Aristocrat(String code) {
         super(code);
         prepareCipher();
@@ -17,9 +18,9 @@ public class Aristocrat extends Cipher {
         Scanner sc_20k = Files.fileScanner("/words_20k.txt");
         while (sc_20k.hasNextLine())
             words_20k.add(sc_20k.nextLine().strip());
-        //Scanner sc_all = Files.fileScanner("/words_all.txt");
-        //while (sc_all.hasNextLine())
-        //    words_all.add(sc_20k.nextLine().strip());
+        Scanner sc_all = Files.fileScanner("/words_all_2.txt");
+        while (sc_all.hasNextLine())
+            words_all.add(sc_all.nextLine().strip());
     }
 
 
@@ -48,7 +49,7 @@ public class Aristocrat extends Cipher {
      * @param s2 Second string to be compared, from the words list.
      * @return A boolean representing whether or not the two patterns match.
      */
-    public static boolean patternMatch(String s1, String s2) {
+    public boolean patternMatch(String s1, String s2) {
         if (s1.length() != s2.length()) return false;
         HashMap<Character, Character> mapping = new HashMap<>();
         for (int c = 0; c < s1.length(); c++) {
@@ -70,30 +71,55 @@ public class Aristocrat extends Cipher {
         return true;
     }
 
+    public ArrayList<String> findMatches(String word) {
+        int trueDepth = searchDepth;
+        if (word.length() < 4) trueDepth = searchDepth/4;
+        ArrayList<String> matches = new ArrayList<>();
+        for (String match : words_all.subList(0, trueDepth)) {
+            if (patternMatch(word, match)) matches.add(match.toUpperCase());
+        }
+        return matches;
+    }
+
     @Override
     public boolean solve() {
+        Timer.startTimer();
         ArrayList<String> solutions = investigate(decrypted, new HashMap<>());
-        System.out.println("Solutions found: " + solutions);
+        System.out.println(solutions.get(0));
+        System.out.println(confidence("confidence: " + solutions.get(0)));
+        System.out.println("solved in " + Timer.elapsedTime() + "ms");
+        //System.out.println(solutions.subList(0, 5).toString().replace(",", "\n"));
         return solutions.size() != 0;
     }
 
     public ArrayList<String> investigate(String working, HashMap<Character, Character> mapping) {
-        System.out.println(working + " | " + mapping);
+        //System.out.println(working + " | " + mapping);
         ArrayList<String> answers = new ArrayList<>();
-        HashMap<String, ArrayList<String>> choices = getWordGuesses(working);
-        //choose to fill in word with least possibilities
-        ArrayList<String> choiceWords = new ArrayList<>(choices.keySet());
-        System.out.println(choiceWords);
-        //if no choices, RETURN
-        if (choiceWords.size() == 0) {
+
+        ArrayList<String> words = getWords(working);
+        words.sort((o1, o2) -> -Integer.compare(o1.length(), o2.length()));
+        HashMap<String, ArrayList<String>> guessCandidates = new HashMap();
+        for (String word : words) {
+            //if already solved, don't do that one
+            if (word.toUpperCase().equals(word)) continue;
+            if (guessCandidates.size() == 5)
+                break;
+            guessCandidates.put(word, new ArrayList<>());
+        }
+        //System.out.println(targetWord);
+        if (guessCandidates.isEmpty()) {
             answers.add(working);
             return answers;
         }
-        choiceWords.sort(Comparator.comparingInt(o -> choices.get(o).size()));
-        String targetWord = choiceWords.get(0);
+        ArrayList<String> candidateList = new ArrayList<>(guessCandidates.keySet());
+        for (String targetWord : guessCandidates.keySet())
+            guessCandidates.put(targetWord, findMatches(targetWord));
+        candidateList.sort(Comparator.comparingInt(o -> guessCandidates.get(o).size()));
+        String targetWord = candidateList.get(0);
+        ArrayList<String> guesses = guessCandidates.get(targetWord);
         //investigate guessing from the best guesses
         tryWord:
-        for (String possibility : choices.get(targetWord)) {
+        for (String possibility : guesses) {
             //update mapping and check if guess is legal
             HashMap<Character, Character> updatedMapping = new HashMap<>(mapping);
             for (int i = 0; i < targetWord.length(); i++) {
@@ -111,7 +137,7 @@ public class Aristocrat extends Cipher {
                         continue tryWord;
                 }
             }
-            System.out.println("Guessing " + targetWord + " is the word " + possibility + "...");
+            //System.out.println("Guessing " + targetWord + " is the word " + possibility + "...");
             answers.addAll(
                     investigate(applyMapping(working, updatedMapping), updatedMapping)
             );
@@ -143,17 +169,16 @@ public class Aristocrat extends Cipher {
 
 
     /**
-     * Determines confidence in a solution. Computes a double in the interval 0 to 1, inclusive,
-     * representing how confident the program is that its answer is reasonable.
-     * @return A double between 0 and 1, where 0 is not confident and all
-     * and 1 is 100% confident.
+     * Determines confidence in a solution. Returns an integer representing doubt, where a lower number
+     * means it is more likely to be the solution.
+     * @return An integer, where a lower number is more likely to be the solution.
      */
-    public double confidence(String s) {
-        double realWords = 0;
+    public int confidence(String s) {
+        int total = 0;
         for (String word : getWords(s)) {
-            realWords += (words_20k.contains(word.toLowerCase()) ? 1 : 0);
+            total += (words_20k.contains(word.toLowerCase()) ? words_20k.indexOf(word) : 99999);
         }
-        return realWords/getWords(s).size();
+        return total;
     }
 
     public String applyMapping(String s, HashMap<Character, Character> mapping) {

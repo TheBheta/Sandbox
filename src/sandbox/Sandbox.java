@@ -8,19 +8,16 @@ public class Sandbox {
     public static void main(String[] args) {
 
         Aristocrat cipher =
-                new Aristocrat("Od wtuoffofu zg ytts soat q kqh ugr. Qss dn htghst ykgd zit ykgfz zg zit wqea fgr.");
-
+                new Aristocrat(
+                        "UKLPN ODIU EPB UKLPN CLJKU EPB UKLPN OQX EPB UKLPN\n" +
+                                "KLJK. QK, UKD UKLPJT ZQV HEP UKLPN VR LI ZQV QPOZ\n" +
+                                "UCZ.");
         //System.out.println(cipher.getEncrypted());
-        //cipher.solve();
-
-        //Aristocrat cipher2 = new Aristocrat(
-        //        "PWL JPNHZZOL ROVCL XOLRJLJ HJ, CVP PWL BMKPVNE"
+        cipher.solve();
+        //Aristocrat cipher3 = new Aristocrat(
+        //        "a'b c def!"
         //);
-        //cipher2.solve();
-        Aristocrat cipher3 = new Aristocrat(
-                "a'b c def!"
-        );
-        cipher3.solve();
+        //cipher3.solve();
         //cipher.analyzeWords();
 
     }
