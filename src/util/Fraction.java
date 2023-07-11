@@ -1,6 +1,8 @@
 package util;
 
+import java.math.BigInteger;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 
 /**
  * A fraction class, to represent a fraction with a numerator and denominator.
@@ -84,5 +86,78 @@ public class Fraction implements Comparable<Fraction>, Cloneable {
 
     public Fraction clone(){
         return new Fraction(numerator, denominator);
+    }
+
+    // following methods adapted from https://sagi.io/crypto-classics-wieners-rsa-attack/
+    public static ArrayList<Integer> getCFExpansion(int n, int d) {
+        ArrayList<Integer> e = new ArrayList<>();
+        int q = n / d;
+        int r = n % d;
+        e.add(q);
+        while (r != 0) {
+            n = d;
+            d = r;
+            q = n / d;
+            r = n % d;
+            e.add(q);
+        }
+        return e;
+    }
+    public static ArrayList<Fraction> getConvergents(int n, int d) {
+        ArrayList<Integer> e = getCFExpansion(n, d);
+        ArrayList<Integer> numerators = new ArrayList<>();
+        ArrayList<Integer> denominators = new ArrayList<>();
+        ArrayList<Fraction> result = new ArrayList<>();
+        for (int i = 0; i < e.size(); i++) {
+            if (i == 0) {
+                numerators.add(e.get(0));
+                denominators.add(1);
+            } else if (i == 1) {
+                numerators.add(e.get(1) * e.get(0) + 1);
+                denominators.add(e.get(1));
+            } else {
+                numerators.add(e.get(i) * numerators.get(i - 1) + numerators.get(i - 2));
+                denominators.add(e.get(i) * denominators.get(i - 1) + denominators.get(i - 2));
+
+            }
+            result.add(new Fraction(numerators.get(i), denominators.get(i)));
+        }
+        return result;
+    }
+
+    public static ArrayList<BigInteger> getCFExpansion(BigInteger n, BigInteger d) {
+        ArrayList<BigInteger> e = new ArrayList<>();
+        BigInteger q = n.divide(d);
+        BigInteger r = n.mod(d);
+        e.add(q);
+        while (!r.equals(BigInteger.ZERO)) {
+            n = d;
+            d = r;
+            q = n.divide(d);
+            r = n.mod(d);
+            e.add(q);
+        }
+        return e;
+    }
+    public static ArrayList<BigInteger[]> getConvergents(BigInteger n, BigInteger d) {
+        ArrayList<BigInteger> e = getCFExpansion(n, d);
+        ArrayList<BigInteger> numerators = new ArrayList<>();
+        ArrayList<BigInteger> denominators = new ArrayList<>();
+        ArrayList<BigInteger[]> result = new ArrayList<>();
+        for (int i = 0; i < e.size(); i++) {
+            if (i == 0) {
+                numerators.add(e.get(0));
+                denominators.add(BigInteger.ONE);
+            } else if (i == 1) {
+                numerators.add(e.get(1).multiply(e.get(0)).add(BigInteger.ONE));
+                denominators.add(e.get(1));
+            } else {
+                numerators.add(e.get(i).multiply(numerators.get(i - 1)).add(numerators.get(i - 2)));
+                denominators.add(e.get(i).multiply(denominators.get(i - 1)).add(denominators.get(i - 2)));
+
+            }
+            result.add(new BigInteger[]{numerators.get(i), denominators.get(i)});
+        }
+        return result;
     }
 }

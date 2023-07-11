@@ -5,6 +5,7 @@ import util.Files;
 import util.Timer;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Aristocrat extends Cipher {
 
@@ -87,7 +88,7 @@ public class Aristocrat extends Cipher {
         ArrayList<String> solutions = investigate(decrypted, new HashMap<>());
         System.out.println(solutions.get(0));
         System.out.println(confidence("confidence: " + solutions.get(0)));
-        System.out.println("solved in " + Timer.elapsedTime() + "ms");
+        //System.out.println("solved in " + Timer.elapsedTime() + "ms");
         //System.out.println(solutions.subList(0, 5).toString().replace(",", "\n"));
         return solutions.size() != 0;
     }
@@ -118,29 +119,38 @@ public class Aristocrat extends Cipher {
         String targetWord = candidateList.get(0);
         ArrayList<String> guesses = guessCandidates.get(targetWord);
         //investigate guessing from the best guesses
-        tryWord:
+        //tryWord:
         for (String possibility : guesses) {
             //update mapping and check if guess is legal
             HashMap<Character, Character> updatedMapping = new HashMap<>(mapping);
+            boolean gucci = true;
             for (int i = 0; i < targetWord.length(); i++) {
                 //if already locked, don't check it
                 if ((int) targetWord.charAt(i) < 91) continue;
                 if (!updatedMapping.containsKey(targetWord.charAt(i))) {
                     //check if already used letter
                     if (updatedMapping.containsValue(possibility.charAt(i)))
-                        continue tryWord;
+                    {
+                        gucci = false;
+                        break;
+                    }
                     updatedMapping.put(
                             targetWord.charAt(i), (char) ((int) possibility.charAt(i)));
                 } else {
                     //check if the new mapping doesn't match with what we already have
                     if (updatedMapping.get(targetWord.charAt(i)) != possibility.charAt(i))
-                        continue tryWord;
+                    {
+                        gucci = false;
+                        break;
+                    }
                 }
             }
             //System.out.println("Guessing " + targetWord + " is the word " + possibility + "...");
-            answers.addAll(
-                    investigate(applyMapping(working, updatedMapping), updatedMapping)
-            );
+            if (gucci) {
+                answers.addAll(
+                        investigate(applyMapping(working, updatedMapping), updatedMapping)
+                );
+            }
         }
 
         return answers;
@@ -181,7 +191,7 @@ public class Aristocrat extends Cipher {
         return total;
     }
 
-    public String applyMapping(String s, HashMap<Character, Character> mapping) {
+    public static String applyMapping(String s, HashMap<Character, Character> mapping) {
         String newString = s;
         for (Character d : mapping.keySet())
             newString = newString.replace(d, mapping.get(d));
@@ -189,5 +199,23 @@ public class Aristocrat extends Cipher {
 
     }
 
+    public static HashMap<Character, Character> getRandomMapping() {
+        HashMap<Character, Character> map = new HashMap<>();
+        List<Character> scrambled = English.letters.chars().mapToObj(i -> (char) i).collect(Collectors.toList());
+        boolean uniqueLetters = false;
+        while (!uniqueLetters) {
+            Collections.shuffle(scrambled);
+            uniqueLetters = true;
+            for (int i = 0; i < 26; i++)
+                if ((char) 65 + i == scrambled.get(i)) uniqueLetters = false;
+        }
+        for (int i = 0; i < 26; i++) {
+            map.put((char) (97 + i), scrambled.get(i));
+        }
+        return map;
+    }
 
+    public static String encrypt(String plain) {
+        return applyMapping(plain.toLowerCase(), getRandomMapping());
+    }
 }
